@@ -9,7 +9,7 @@ const Sidebar = () => {
             <nav>
                 <ul style={{ listStyle: "none", padding: 0 }}>
                     <li>
-                        <NavLink to="/" style={linkStyle}>
+                        <NavLink to="/home" style={linkStyle}>
                             Home
                         </NavLink>
                     </li>
