@@ -1,4 +1,3 @@
-// pages/ManageBlogs.js
 import React, { useEffect, useState } from "react";
 import { db, ref, onValue, update, remove } from "../firebase";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +11,9 @@ const ManageBlogs = () => {
         const blogRef = ref(db, "blogs");
         onValue(blogRef, (snapshot) => {
             const blogData = snapshot.val();
-            const blogList = blogData ? Object.entries(blogData).map(([id, data]) => ({ id, ...data })) : [];
+            const blogList = blogData
+                ? Object.entries(blogData).map(([id, data]) => ({ id, ...data }))
+                : [];
             setBlogs(blogList);
         });
     }, []);
@@ -33,7 +34,9 @@ const ManageBlogs = () => {
                 <thead>
                     <tr>
                         <th style={thStyle}>Title</th>
-                        <th style={thStyle}>Date</th>
+                        <th style={thStyle}>Content</th>
+                        <th style={thStyle}>Date Created</th>
+                        <th style={thStyle}>Approval Status</th>
                         <th style={thStyle}>Actions</th>
                     </tr>
                 </thead>
@@ -41,22 +44,39 @@ const ManageBlogs = () => {
                     {blogs.map((blog) => (
                         <tr key={blog.id} style={trStyle}>
                             <td
-                                style={tdStyle}
+                                style={{ ...tdStyle, cursor: "pointer", color: "blue" }}
                                 onClick={() => navigate(`/blogs/${blog.id}`)}
-                                className="clickable"
                             >
-                                {blog.title}
+                                {blog.title || "Untitled Blog"}
                             </td>
-                            <td style={tdStyle}>{new Date(blog.date).toLocaleDateString()}</td>
+                            <td style={tdStyle}>
+                                {blog.content
+                                    ? blog.content.replace(/<[^>]+>/g, "").slice(0, 50) + "..."
+                                    : "No Content"}
+                            </td>
+                            <td style={tdStyle}>
+                                {blog.dateCreated
+                                    ? new Date(blog.dateCreated).toLocaleString()
+                                    : "Unknown"}
+                            </td>
+                            <td style={tdStyle}>
+                                {blog.isApproved ? "Approved" : "Pending Approval"}
+                            </td>
                             <td style={tdStyle}>
                                 {blog.isApproved ? (
-                                    <span>Approved</span>
+                                    <span style={{ color: "green", fontWeight: "bold" }}>Approved</span>
                                 ) : (
                                     <>
-                                        <button onClick={() => handleApprove(blog.id)} style={acceptButtonStyle}>
-                                            Accept
+                                        <button
+                                            onClick={() => handleApprove(blog.id)}
+                                            style={acceptButtonStyle}
+                                        >
+                                            Approve
                                         </button>
-                                        <button onClick={() => handleReject(blog.id)} style={rejectButtonStyle}>
+                                        <button
+                                            onClick={() => handleReject(blog.id)}
+                                            style={rejectButtonStyle}
+                                        >
                                             Reject
                                         </button>
                                     </>
@@ -83,7 +103,7 @@ const trStyle = {
 
 const tdStyle = {
     padding: "10px",
-    cursor: "pointer",
+    verticalAlign: "top",
 };
 
 const acceptButtonStyle = {
@@ -106,4 +126,3 @@ const rejectButtonStyle = {
 };
 
 export default ManageBlogs;
-

@@ -23,86 +23,52 @@ const Home = () => {
 
     useEffect(() => {
         fetchRealtimeData();
+        fetchUserGrowth();
     }, []);
 
     const fetchRealtimeData = () => {
-        // Fetch user count and names along with their creation dates
+        // Fetch blog post count
+        const blogRef = ref(db, "blogs");
+        onValue(blogRef, (snapshot) => {
+            const blogs = snapshot.val();
+            setBlogPosts(Object.keys(blogs || {}).length);
+        });
+    };
+
+    const fetchUserGrowth = () => {
         const userRef = ref(db, "users");
         onValue(userRef, (snapshot) => {
             const users = snapshot.val();
             if (users) {
                 setUserCount(Object.keys(users).length);
-
-                // Extract user names and creation dates
-                const names = {};
-                const growthData = [];
-                Object.keys(users).forEach((userId) => {
-                    const user = users[userId];
-                    names[userId] = user.name || `User ${userId}`; // Default to User ID if name is missing
-
-                    // Extract user creation date (if it exists)
-                    if (user.dateCreated) {
-                        const date = new Date(user.dateCreated).toISOString().split('T')[0];
-                        growthData.push(date);
-                    }
-                });
-
-                console.log("User names:", names);
-                console.log("Growth data before transformation:", growthData);
-
-                setUserNames(names);
-                setUserGrowth(transformGrowthData(growthData));
-            } else {
-                console.warn("No user data found in Firebase.");
+    
+                // Extract signup dates safely
+                const growthData = transformGrowthData(
+                    Object.values(users)
+                        .map((user) => user.dateCreated)
+                        .filter((date) => date) // Filter out invalid or missing dates
+                );
+                setUserGrowth(growthData);
             }
-        });
-
-        // Fetch blog post count and blog data
-        const blogRef = ref(db, "blogs");
-        onValue(blogRef, (snapshot) => {
-            const blogs = snapshot.val();
-            setBlogPosts(Object.keys(blogs || {}).length);
-            setBlogData(blogs || {});
-        });
-
-        // Fetch medication data for all users
-        const medRef = ref(db, "medications");
-        onValue(medRef, (snapshot) => {
-            const data = snapshot.val();
-            setMedicationData(data || {});
         });
     };
+    
 
-    // Helper function to transform the growth data into a format suitable for charting
     const transformGrowthData = (dates) => {
-        if (!dates.length) {
-            console.warn("No dates found for user growth transformation.");
-            return [];
-        }
-
         const growthMap = {};
 
-        // Aggregate user count by date
         dates.forEach((date) => {
-            if (growthMap[date]) {
-                growthMap[date]++;
-            } else {
-                growthMap[date] = 1;
-            }
+            const formattedDate = new Date(date).toISOString().split("T")[0];
+            growthMap[formattedDate] = (growthMap[formattedDate] || 0) + 1;
         });
 
-        // Sort dates and calculate cumulative growth
         let cumulativeCount = 0;
-        const transformedData = Object.keys(growthMap)
+        return Object.keys(growthMap)
             .sort()
             .map((date) => {
                 cumulativeCount += growthMap[date];
                 return { date, count: cumulativeCount };
             });
-
-        console.log("Transformed growth data:", transformedData);
-
-        return transformedData;
     };
 
     const generatePDF = (type) => {
@@ -227,6 +193,7 @@ const Home = () => {
         doc.save(`${type}.pdf`);
     };
 
+
     return (
         <main style={{ flexGrow: 1, padding: "20px" }}>
             <Header />
@@ -234,9 +201,9 @@ const Home = () => {
                 <StatCard label="Users" value={userCount} />
                 <StatCard label="Blog Posts" value={blogPosts} />
             </section>
-            <section style={{ margin: "20px 0" }}>
+            <section style={{ marginTop: "20px" }}>
                 <h2>User Growth</h2>
-                <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+                {userGrowth.length > 0 ? (
                     <Line
                         data={{
                             labels: userGrowth.map((dataPoint) => dataPoint.date),
@@ -244,9 +211,9 @@ const Home = () => {
                                 {
                                     label: "User Growth",
                                     data: userGrowth.map((dataPoint) => dataPoint.count),
-                                    backgroundColor: "rgba(75,192,192,0.4)",
                                     borderColor: "rgba(75,192,192,1)",
-                                    borderWidth: 1,
+                                    backgroundColor: "rgba(75,192,192,0.2)",
+                                    borderWidth: 2,
                                 },
                             ],
                         }}
@@ -255,7 +222,7 @@ const Home = () => {
                             maintainAspectRatio: true,
                             scales: {
                                 x: {
-                                    type: 'category',
+                                    type: "category",
                                     title: {
                                         display: true,
                                         text: "Date",
@@ -264,16 +231,16 @@ const Home = () => {
                                 y: {
                                     title: {
                                         display: true,
-                                        text: "Number of Users",
+                                        text: "Cumulative Users",
                                     },
                                     beginAtZero: true,
                                 },
                             },
                         }}
-                        height={400}
-                        width={800}
                     />
-                </div>
+                ) : (
+                    <p>Loading user growth data...</p>
+                )}
             </section>
             <section style={{ display: "flex", gap: "20px", margin: "20px 0" }}>
                 <button onClick={() => generatePDF("Medication Usage Reports")} style={buttonStyle}>
