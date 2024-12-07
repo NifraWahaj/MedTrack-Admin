@@ -22,6 +22,7 @@ const Home = () => {
     const [userCount, setUserCount] = useState(0);
     const [blogPosts, setBlogPosts] = useState(0);
     const [medicationFrequency, setMedicationFrequency] = useState({});
+    const [medicationData, setMedicationData] = useState({});
     const [userNames, setUserNames] = useState({});
     const [blogData, setBlogData] = useState({});
 
@@ -56,19 +57,17 @@ const Home = () => {
         const medRef = ref(db, "medications");
         onValue(medRef, (snapshot) => {
             const medications = snapshot.val();
-            const frequencyMap = {};
+            if (medications) {
+                setMedicationData(medications); // Store medications as is
+            }
 
+            const frequencyMap = {};
             if (medications) {
                 Object.keys(medications).forEach((userId) => {
                     const userMeds = medications[userId];
-
                     Object.values(userMeds).forEach((med) => {
                         if (med.name) {
-                            if (frequencyMap[med.name]) {
-                                frequencyMap[med.name]++;
-                            } else {
-                                frequencyMap[med.name] = 1;
-                            }
+                            frequencyMap[med.name] = (frequencyMap[med.name] || 0) + 1;
                         }
                     });
                 });
@@ -88,26 +87,60 @@ const Home = () => {
             doc.setFontSize(18);
             doc.text("Medication Usage Report", 105, 20, { align: "center" });
 
-            doc.setFontSize(14);
-            doc.text("Summary", marginX, currentY);
-            currentY += 10;
-
-            if (Object.keys(medicationFrequency).length === 0) {
+            if (Object.keys(medicationData).length === 0) {
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(12);
                 doc.text("No medication data available.", marginX, currentY);
             } else {
-                const headers = [["Medication Name", "Usage Count"]];
-                const data = Object.entries(medicationFrequency).map(([name, count]) => [name, count]);
+                Object.keys(medicationData).forEach((userId, index) => {
+                    const userMeds = medicationData[userId];
+                    const userName = userNames[userId] || `User ${userId}`;
 
-                doc.autoTable({
-                    startY: currentY,
-                    head: headers,
-                    body: data,
-                    theme: "striped",
-                    styles: { font: "helvetica", fontSize: 11 },
-                    headStyles: { fillColor: [71, 147, 209] },
-                    margin: { left: marginX, right: marginX },
+                    // Title for each user
+                    doc.setFontSize(14);
+                    doc.text(`User: ${userName} (ID: ${userId})`, marginX, currentY);
+
+                    // Prepare data for each medication in "row-wise" format
+                    Object.keys(userMeds).forEach((medKey) => {
+                        const med = userMeds[medKey];
+
+                        const tableData = [
+                            ["Medication Name", med.name || "N/A"],
+                            ["Frequency", med.frequency || "N/A"],
+                            ["First Intake", med.firstIntakeDetails || "N/A"],
+                            ["Second Intake", med.secondIntakeDetails || "N/A"],
+                            ["Start Date", med.startDate || "N/A"],
+                            ["End Date", med.endDate || "N/A"],
+                        ];
+
+                        // Display table with medication details
+                        doc.autoTable({
+                            startY: currentY + 5,
+                            head: [["Field", "Details"]],
+                            body: tableData,
+                            theme: "grid",
+                            styles: { font: "helvetica", fontSize: 11 },
+                            headStyles: { fillColor: [71, 147, 209] },
+                            margin: { left: marginX, right: marginX },
+                        });
+
+                        currentY = doc.lastAutoTable.finalY + 10;
+
+                        // Check if we need a new page
+                        if (currentY > 270) {
+                            doc.addPage();
+                            currentY = 30;
+                        }
+                    });
+
+                    // Add spacing between users
+                    currentY += 10;
+
+                    // Add a page if needed for the next user
+                    if (index < Object.keys(medicationData).length - 1 && currentY > 270) {
+                        doc.addPage();
+                        currentY = 30;
+                    }
                 });
             }
         } else if (type === "Community Interaction Reports") {
