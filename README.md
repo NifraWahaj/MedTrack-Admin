@@ -40,8 +40,7 @@ The Med Track Admin Panel is a ReactJS web application that works alongside the 
   * Firebase Firestore (Database)
 
 ## Screenshots
-
-<img src="screenshots/medtrack-admin-1.png" alt="Screenshot 1" width="800">
 <img src="screenshots/medtrack-admin-2.png" alt="Screenshot 2" width="800">
+<img src="screenshots/medtrack-admin-1.png" alt="Screenshot 1" width="800">
 <img src="screenshots/medtrack-admin-3.png" alt="Screenshot 3" width="800">
 <img src="screenshots/medtrack-admin-4.png" alt="Screenshot 4" width="800">
